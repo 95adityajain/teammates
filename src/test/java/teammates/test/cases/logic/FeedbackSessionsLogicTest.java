@@ -32,15 +32,11 @@ import teammates.common.exception.EntityAlreadyExistsException;
 import teammates.common.exception.EntityDoesNotExistException;
 import teammates.common.exception.InvalidParametersException;
 import teammates.common.util.Const;
-import teammates.common.util.EmailType;
-import teammates.common.util.EmailWrapper;
 import teammates.common.util.ThreadHelper;
 import teammates.common.util.TimeHelper;
-import teammates.logic.core.CoursesLogic;
 import teammates.logic.core.FeedbackQuestionsLogic;
 import teammates.logic.core.FeedbackResponsesLogic;
 import teammates.logic.core.FeedbackSessionsLogic;
-import teammates.storage.api.StudentsDb;
 import teammates.test.cases.BaseComponentTestCase;
 import teammates.test.driver.AssertHelper;
 
@@ -50,13 +46,13 @@ public class FeedbackSessionsLogicTest extends BaseComponentTestCase {
     private static FeedbackSessionsLogic fsLogic = FeedbackSessionsLogic.inst();
     private static FeedbackQuestionsLogic fqLogic = FeedbackQuestionsLogic.inst();
     private static FeedbackResponsesLogic frLogic = FeedbackResponsesLogic.inst();
-    private DataBundle dataBundle = loadDataBundle("/FeedbackSessionsLogicTest.json");
+    private static DataBundle dataBundle = loadDataBundle("/FeedbackSessionsLogicTest.json");
 
     @BeforeClass
-    public static void classSetUp() throws Exception {
+    public void classSetup() {
         printTestClassHeader();
         gaeSimulation.resetDatastore();
-        removeAndRestoreDatastoreFromJson("/FeedbackSessionsLogicTest.json");
+        removeAndRestoreDataBundle(dataBundle);
     }
     
     @Test
@@ -85,7 +81,6 @@ public class FeedbackSessionsLogicTest extends BaseComponentTestCase {
         testIsFeedbackSessionCompletedByInstructor();
         testIsFeedbackSessionFullyCompletedByStudent();
                 
-        testSendFeedbackSessionSubmissionConfirmationEmail();
         testDeleteFeedbackSessionsForCourse();
     }
     
@@ -366,7 +361,7 @@ public class FeedbackSessionsLogicTest extends BaseComponentTestCase {
         // This file contains a session with a private session + a standard
         // session + a special session with all questions without recipients.
         DataBundle newDataBundle = loadDataBundle("/FeedbackSessionDetailsTest.json");
-        removeAndRestoreData(newDataBundle);
+        removeAndRestoreDataBundle(newDataBundle);
         
         Map<String, FeedbackSessionDetailsBundle> detailsMap =
                 new HashMap<String, FeedbackSessionDetailsBundle>();
@@ -766,7 +761,7 @@ public class FeedbackSessionsLogicTest extends BaseComponentTestCase {
         // session which needs to have enough qn/response combinations to cover as much
         // of the SUT as possible
         DataBundle responseBundle = loadDataBundle("/FeedbackSessionResultsTest.json");
-        removeAndRestoreData(responseBundle);
+        removeAndRestoreDataBundle(responseBundle);
         
         ______TS("standard session with varied visibilities");
         
@@ -1219,8 +1214,8 @@ public class FeedbackSessionsLogicTest extends BaseComponentTestCase {
 
         ______TS("MCQ results");
         
-        removeAndRestoreDatastoreFromJson("/FeedbackSessionQuestionTypeTest.json");
         DataBundle newDataBundle = loadDataBundle("/FeedbackSessionQuestionTypeTest.json");
+        removeAndRestoreDataBundle(newDataBundle);
         session = newDataBundle.feedbackSessions.get("mcqSession");
         instructor = newDataBundle.instructors.get("instructor1OfCourse1");
         
@@ -1969,71 +1964,6 @@ public class FeedbackSessionsLogicTest extends BaseComponentTestCase {
         ______TS("success case: partially done by student 3");
         assertFalse(fsLogic.isFeedbackSessionFullyCompletedByStudent(fs.getFeedbackSessionName(), fs.getCourseId(),
                                                                      student3OfCourse1.email));
-    }
-    
-    private void testSendFeedbackSessionSubmissionConfirmationEmail() throws Exception {
-        // private method. no need to check for authentication.
-        
-        FeedbackSessionAttributes fs = dataBundle.feedbackSessions.get("session1InCourse1");
-        String courseName = CoursesLogic.inst().getCourse(fs.getCourseId()).getName();
-        
-        ______TS("success: registered student");
-        
-        StudentAttributes studentToSendConfirmation = dataBundle.students.get("student5InCourse1");
-        
-        EmailWrapper emailSent = fsLogic.sendConfirmationEmailForSubmission(fs.getCourseId(), fs.getFeedbackSessionName(),
-                                                                            studentToSendConfirmation.googleId, null, null);
-
-        String errorMessage = "No feedback submission confirmation email sent to selected student "
-                              + studentToSendConfirmation.email;
-        assertNotNull(errorMessage, emailSent);
-        assertEquals(String.format(EmailType.FEEDBACK_SUBMISSION_CONFIRMATION.getSubject(), courseName,
-                                   fs.getFeedbackSessionName()),
-                     emailSent.getSubject());
-        
-        ______TS("success: unregistered student");
-        
-        StudentAttributes unregStudent = new StudentAttributes("1", "Team0.1", "Unreg Student",
-                                                               "unreg@stud.ent", "asdf", "idOfTypicalCourse1");
-
-        StudentsDb stDb = new StudentsDb();
-        stDb.createStudentWithoutDocument(unregStudent);
-        unregStudent = stDb.getStudentForEmail("idOfTypicalCourse1", "unreg@stud.ent");
-        gaeSimulation.logoutUser();
-
-        emailSent = fsLogic.sendConfirmationEmailForSubmission(fs.getCourseId(), fs.getFeedbackSessionName(),
-                                                               null, unregStudent.email, unregStudent.key);
-
-        assertNotNull(errorMessage, emailSent);
-        assertEquals(String.format(EmailType.FEEDBACK_SUBMISSION_CONFIRMATION.getSubject(), courseName,
-                                   fs.getFeedbackSessionName()),
-                     emailSent.getSubject());
-        
-        ______TS("success: instructor");
-        
-        InstructorAttributes instructor = dataBundle.instructors.get("helperOfCourse1");
-        
-        emailSent = fsLogic.sendConfirmationEmailForSubmission(fs.getCourseId(), fs.getFeedbackSessionName(),
-                                                               instructor.googleId, null, null);
-
-        errorMessage = "No feedback submission confirmation email sent to selected instructor " + instructor.email;
-        assertNotNull(errorMessage, emailSent);
-        assertEquals(String.format(EmailType.FEEDBACK_SUBMISSION_CONFIRMATION.getSubject(), courseName,
-                                   fs.getFeedbackSessionName()),
-                     emailSent.getSubject());
-        
-        ______TS("failure: non-existent Feedback session");
-        
-        String nonExistentFsName = "non-ExIsTENT FsnaMe123";
-        
-        try {
-            fsLogic.sendConfirmationEmailForSubmission(fs.getCourseId(), nonExistentFsName,
-                                                       studentToSendConfirmation.googleId, null, null);
-            signalFailureToDetectException();
-        } catch (EntityDoesNotExistException edne) {
-            assertEquals("Trying to confirm submission a non-existent feedback session: "
-                         + fs.getCourseId() + "/" + nonExistentFsName, edne.getMessage());
-        }
     }
     
     private FeedbackSessionAttributes getNewFeedbackSession() {

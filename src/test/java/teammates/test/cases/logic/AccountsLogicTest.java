@@ -35,9 +35,9 @@ public class AccountsLogicTest extends BaseComponentTestCase {
     private static DataBundle dataBundle = getTypicalDataBundle();
 
     @BeforeClass
-    public static void classSetUp() throws Exception {
+    public void classSetup() {
         printTestClassHeader();
-        removeAndRestoreTypicalDataInDatastore();
+        removeAndRestoreTypicalDataBundle();
         
     }
 
@@ -68,7 +68,7 @@ public class AccountsLogicTest extends BaseComponentTestCase {
         spa.shortName = "test acc na";
         spa.email = "test@personal.com";
         spa.gender = Const.GenderTypes.MALE;
-        spa.nationality = "test.nationality";
+        spa.nationality = "American";
         spa.institute = "institute";
         spa.moreInfo = "this is more info";
         
@@ -231,10 +231,10 @@ public class AccountsLogicTest extends BaseComponentTestCase {
         ______TS("success: without encryption and account already exists");
 
         StudentProfileAttributes spa = new StudentProfileAttributes(correctStudentId,
-                "ABC", "personal@gmail.com", "nus", "Singapore", "male", "", "");
+                "", "", "TEAMMATES Test Institute 1", "", "other", "", "");
         
         AccountAttributes accountData = new AccountAttributes(correctStudentId,
-                "nameABC", false, "real@gmail.com", "nus", spa);
+                "nameABC", false, "real@gmail.com", "TEAMMATES Test Institute 1", spa);
         
         accountsLogic.createAccount(accountData);
         accountsLogic.joinCourseForStudent(StringHelper.encrypt(studentData.key), correctStudentId);
