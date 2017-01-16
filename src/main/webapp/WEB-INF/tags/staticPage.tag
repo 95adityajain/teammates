@@ -9,6 +9,7 @@
     <meta name="keywords" content="Teammates, peer feedback, peer evaluation, student, team, project, free">
     <meta name="description" content="TEAMMATES is an Online Peer Feedback System for student team projects. It is completely free to use. Get your students to evaluate their performance in team projects, and view reports and summaries of their feedback and evaluations.">
     <link rel="stylesheet" href="stylesheets/teammates.css" type="text/css">
+    <link rel="stylesheet" href="stylesheets/lib/bootstrap.min.css" type="text/css">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>TEAMMATES - Online Peer Feedback/Evaluation System for Student Team Projects</title>
 </head>
@@ -69,10 +70,10 @@
                     </div>
                     <div id="loginHolder">
                         <form action="/login" style="float: left;" name="studentLogin">
-                            <input type="submit" name="student" class="button" id="btnStudentLogin" value="Student Login">
+                            <button type="submit" name="student" class="btn btn-success" id="btnStudentLogin">Student Login</button>
                         </form>
                         <form action="/login" style="float: left;" name="instructorLogin">
-                            <input type="submit" name="instructor" class="button" id="btnInstructorLogin" value="Instructor Login">
+                            <button type="submit" name="instructor" class="btn btn-success" id="btnInstructorLogin">Instructor Login</button>
                         </form>
                     </div>
                     <div style="clear: both;"></div>
